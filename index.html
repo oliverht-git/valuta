@@ -11,31 +11,42 @@
     <main class="calculator">
         <p class="eyebrow">Snabbt och enkelt</p>
         <h1>Växelräknaren</h1>
-        <p class="intro">Fyll i kostnaden och hur mycket kunden betalade. Vi räknar ut växeln med minsta möjliga antal sedlar och mynt.</p>
+        <p class="intro">Fyll i kostnaden och betalningen. Se växeln i samma valuta eller växla den till en annan valuta och få en uppskattning av sedlar och mynt.</p>
 
         <form id="change-form" novalidate>
-            <div class="currency-field">
-                <label for="currency-select">Valuta</label>
-                <select id="currency-select" name="currency">
-                    <option value="SEK">Svenska kronor (SEK)</option>
-                    <option value="EUR">Euro (EUR)</option>
-                    <option value="GBP">Brittiska pund (GBP)</option>
-                    <option value="USD">Amerikanska dollar (USD)</option>
-                </select>
+            <div class="currency-pair">
+                <div class="currency-field">
+                    <label for="currency-select">Du betalade i</label>
+                    <select id="currency-select" name="currency">
+                        <option value="SEK">Svenska kronor (SEK)</option>
+                        <option value="EUR">Euro (EUR)</option>
+                        <option value="GBP">Brittiska pund (GBP)</option>
+                        <option value="USD">Amerikanska dollar (USD)</option>
+                    </select>
+                </div>
+                <div class="currency-field">
+                    <label for="target-currency-select">Visa växeln i</label>
+                    <select id="target-currency-select" name="targetCurrency">
+                        <option value="SEK" selected>Svenska kronor (SEK)</option>
+                        <option value="EUR">Euro (EUR)</option>
+                        <option value="GBP">Brittiska pund (GBP)</option>
+                        <option value="USD">Amerikanska dollar (USD)</option>
+                    </select>
+                </div>
             </div>
             <div class="fields">
                 <div>
                     <label for="cost">Kostnad</label>
                     <div class="input-wrap">
                         <input id="cost" name="cost" type="number" min="0" step="1" inputmode="decimal" placeholder="Till exempel 138" required>
-                        <span class="currency" aria-hidden="true">kr</span>
+                        <span id="source-currency-label" class="currency" aria-hidden="true">SEK</span>
                     </div>
                 </div>
                 <div>
                     <label for="paid">Betalat</label>
                     <div class="input-wrap">
                         <input id="paid" name="paid" type="number" min="0" step="1" inputmode="decimal" placeholder="Till exempel 200" required>
-                        <span class="currency" aria-hidden="true">kr</span>
+                        <span class="currency source-currency-label" aria-hidden="true">SEK</span>
                     </div>
                 </div>
             </div>
@@ -43,7 +54,7 @@
         </form>
 
         <section id="result" class="result" aria-live="polite" aria-atomic="true" hidden></section>
-        <p class="note">Euro används i euroländerna. För euro, pund och dollar kan du ange belopp med upp till två decimaler.</p>
+        <p class="note">Växelkursen hämtas automatiskt och är ungefärlig. Sedel- och myntvalörer kan skilja sig mellan länder.</p>
     </main>
 
     <script src="script.js" defer></script>

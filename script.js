@@ -1,6 +1,7 @@
 const form = document.querySelector('#change-form');
 const result = document.querySelector('#result');
 const currencySelect = document.querySelector('#currency-select');
+const targetCurrencySelect = document.querySelector('#target-currency-select');
 const costInput = document.querySelector('#cost');
 const paidInput = document.querySelector('#paid');
 
@@ -35,11 +36,11 @@ function getCurrency() {
     return currencies[currencySelect.value];
 }
 
-function formatAmount(minorUnits) {
-    const { locale, decimals } = getCurrency();
+function formatAmount(minorUnits, currencyCode = currencySelect.value) {
+    const { locale, decimals } = currencies[currencyCode];
     return new Intl.NumberFormat(locale, {
         style: 'currency',
-        currency: currencySelect.value,
+        currency: currencyCode,
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals
     }).format(minorUnits / (10 ** decimals));
@@ -56,7 +57,7 @@ function updateCurrencyFields() {
         input.placeholder = example;
     }
 
-    document.querySelectorAll('.currency').forEach((label) => {
+    document.querySelectorAll('.source-currency-label, #source-currency-label').forEach((label) => {
         label.textContent = currencyCode;
     });
 }
@@ -77,14 +78,53 @@ function toMinorUnits(input, decimals) {
     return roundedValue;
 }
 
+async function getExchangeRate(sourceCurrency, targetCurrency) {
+    if (sourceCurrency === targetCurrency) {
+        return 1;
+    }
+
+    const response = await fetch(`https://open.er-api.com/v6/latest/${sourceCurrency}`);
+    if (!response.ok) {
+        throw new Error('Exchange rate request failed');
+    }
+
+    const data = await response.json();
+    const rate = data.rates?.[targetCurrency];
+    if (data.result !== 'success' || !Number.isFinite(rate)) {
+        throw new Error('Exchange rate unavailable');
+    }
+
+    return rate;
+}
+
+function createBreakdown(amount, currencyCode) {
+    const { denominations, noteMin } = currencies[currencyCode];
+    let remaining = amount;
+
+    return denominations
+        .map((value) => {
+            const count = Math.floor(remaining / value);
+            remaining %= value;
+            return { value, count };
+        })
+        .filter(({ count }) => count > 0)
+        .map(({ value, count }) => {
+            const unit = value >= noteMin ? 'sedel' : 'mynt';
+            const unitLabel = count === 1 ? unit : (unit === 'sedel' ? 'sedlar' : 'mynt');
+            return `<li><span>${formatAmount(value, currencyCode)} ${unitLabel}</span><strong>${count} st</strong></li>`;
+        })
+        .join('');
+}
+
 currencySelect.addEventListener('change', updateCurrencyFields);
 updateCurrencyFields();
 
-
-form.addEventListener('submit', (event) => {
+form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
-    const { decimals, denominations, noteMin } = getCurrency();
+    const sourceCurrency = currencySelect.value;
+    const targetCurrency = targetCurrencySelect.value;
+    const { decimals } = getCurrency();
     const cost = toMinorUnits(costInput, decimals);
     const paid = toMinorUnits(paidInput, decimals);
 
@@ -101,26 +141,31 @@ form.addEventListener('submit', (event) => {
         return;
     }
 
-    let change = paid - cost;
-    if (change === 0) {
+    const sourceChange = paid - cost;
+    if (sourceChange === 0) {
         result.innerHTML = '<h2>Jämna pengar</h2><p class="message">Ingen växel ska lämnas tillbaka.</p>';
         return;
     }
 
-    const total = change;
-    const breakdown = denominations
-        .map((value) => {
-            const count = Math.floor(change / value);
-            change %= value;
-            return { value, count };
-        })
-        .filter(({ count }) => count > 0)
-        .map(({ value, count }) => {
-            const unit = value >= noteMin ? 'sedel' : 'mynt';
-            const unitLabel = count === 1 ? unit : `${unit} (${unit === 'sedel' ? 'sedlar' : 'mynt'})`;
-            return `<li><span>${formatAmount(value)} ${unitLabel}</span><strong>${count} st</strong></li>`;
-        })
-        .join('');
+    result.hidden = false;
+    result.innerHTML = '<p class="message">Hämtar växelkurs …</p>';
 
-    result.innerHTML = `<h2>Växel att lämna tillbaka</h2><p class="result-total">${formatAmount(total)}</p><ul class="denominations">${breakdown}</ul>`;
+    try {
+        const rate = await getExchangeRate(sourceCurrency, targetCurrency);
+        const sourceAmount = sourceChange / (10 ** decimals);
+        const targetDecimals = currencies[targetCurrency].decimals;
+        const targetAmount = Math.round(sourceAmount * rate * (10 ** targetDecimals));
+        const breakdown = createBreakdown(targetAmount, targetCurrency);
+        const rateText = new Intl.NumberFormat(currencies[targetCurrency].locale, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 4
+        }).format(rate);
+        const conversionDetails = sourceCurrency === targetCurrency
+            ? ''
+            : `<p class="conversion-detail">${formatAmount(sourceChange, sourceCurrency)} · 1 ${sourceCurrency} = ${rateText} ${targetCurrency}</p>`;
+
+        result.innerHTML = `<h2>Växel att lämna tillbaka i ${targetCurrency}</h2><p class="result-total">${formatAmount(targetAmount, targetCurrency)}</p>${conversionDetails}<ul class="denominations">${breakdown}</ul>`;
+    } catch {
+        result.innerHTML = '<p class="message error">Det gick inte att hämta växelkursen. Kontrollera internetanslutningen och försök igen.</p>';
+    }
 });
