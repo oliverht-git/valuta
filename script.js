@@ -5,6 +5,7 @@ const targetCurrencySelect = document.querySelector('#target-currency-select');
 const costInput = document.querySelector('#cost');
 const paidInput = document.querySelector('#paid');
 
+// det olika valörer som man kan växla mellan
 const currencies = {
     SEK: {
         locale: 'sv-SE',
@@ -15,27 +16,27 @@ const currencies = {
     EUR: {
         locale: 'de-DE',
         decimals: 2,
-        denominations: [50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1],
+        denominations: [500, 200, 100, 50, 20, 10, 5, 2, 1],
         noteMin: 500
     },
     GBP: {
         locale: 'en-GB',
         decimals: 2,
-        denominations: [5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1],
+        denominations: [50, 20, 10, 5, 2, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01],
         noteMin: 500
     },
     USD: {
         locale: 'en-US',
         decimals: 2,
-        denominations: [10000, 5000, 2000, 1000, 500, 200, 100, 25, 10, 5, 1],
+        denominations: [100, 25, 10, 5, 1, 0.5, 0.25, 0.1, 0.05, 0.01],
         noteMin: 100
     }
 };
-
+// hämtar information om den valda valutan
 function getCurrency() {
     return currencies[currencySelect.value];
 }
-
+// formaterar beloppet till rätt valuta och decimaler
 function formatAmount(minorUnits, currencyCode = currencySelect.value) {
     const { locale, decimals } = currencies[currencyCode];
     return new Intl.NumberFormat(locale, {
@@ -45,27 +46,27 @@ function formatAmount(minorUnits, currencyCode = currencySelect.value) {
         maximumFractionDigits: decimals
     }).format(minorUnits / (10 ** decimals));
 }
-
+// uppdaterar input-fälten och etiketter baserat på den valda valutan
 function updateCurrencyFields() {
     const { decimals } = getCurrency();
     const step = decimals === 0 ? '1' : '0.01';
     const example = decimals === 0 ? 'Skriv kostnad' : 'Skriv belopp';
     const currencyCode = currencySelect.value;
-
+    //platshållare för kostnad och betalning
     for (const input of [costInput, paidInput]) {
         input.step = step;
         input.placeholder = example;
     }
-
+    // uppdaterar till vilken valuta det är
     document.querySelectorAll('.source-currency-label, #source-currency-label').forEach((label) => {
         label.textContent = currencyCode;
     });
 }
-
+//tillåter mindre valörer i uträckningen när man ska få tillbaka växlingen
 function toMinorUnits(input, decimals) {
     const value = Number(input.value);
     const multiplier = 10 ** decimals;
-
+    // säkerställer att värdet är giltigt och kontrollerar att decimalerna inte är för många
     if (input.value === '' || !Number.isFinite(value) || value < 0 || !Number.isSafeInteger(Math.round(value * multiplier))) {
         return null;
     }
@@ -77,7 +78,7 @@ function toMinorUnits(input, decimals) {
 
     return roundedValue;
 }
-
+//var tvungen att använda en API som jag hittade när jag letadeefter bra sätt att få växlingen att visa error om det inte finns tillräckligt med pengar som betalas med.
 async function getExchangeRate(sourceCurrency, targetCurrency) {
     if (sourceCurrency === targetCurrency) {
         return 1;
@@ -96,7 +97,7 @@ async function getExchangeRate(sourceCurrency, targetCurrency) {
 
     return rate;
 }
-
+// skapar listor på vilka valörer som ska lämnas tillbaka och hur många av varje.
 function createBreakdown(amount, currencyCode) {
     const { denominations, noteMin } = currencies[currencyCode];
     let remaining = amount;
@@ -118,7 +119,7 @@ function createBreakdown(amount, currencyCode) {
 
 currencySelect.addEventListener('change', updateCurrencyFields);
 updateCurrencyFields();
-
+// låter användaren skicka in valitutan innan det räknas ut.
 form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
@@ -129,7 +130,7 @@ form.addEventListener('submit', async (event) => {
     const paid = toMinorUnits(paidInput, decimals);
 
     result.hidden = false;
-
+    // kontrollerar att kostnaden och betalningen är giltiga
     if (cost === null || paid === null) {
         const precisionMessage = decimals === 0 ? 'heltal' : 'belopp med högst två decimaler';
         result.innerHTML = `<p class="message error">Ange kostnad och betalning som ${precisionMessage} på 0 eller mer.</p>`;
@@ -149,7 +150,7 @@ form.addEventListener('submit', async (event) => {
 
     result.hidden = false;
     result.innerHTML = '<p class="message">Hämtar växelkurs …</p>';
-
+// hämtar växelkursen och räknar ut hur mycket växel som ska lämnas tillbaka
     try {
         const rate = await getExchangeRate(sourceCurrency, targetCurrency);
         const sourceAmount = sourceChange / (10 ** decimals);

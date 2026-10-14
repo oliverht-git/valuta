@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!--Denna kod gör att man kan växla det olika valutorna och få ut Euros när man använder amerikanska dollar för att växla mellan.-->
     <main class="calculator">
         <p class="eyebrow">Snabbt och enkelt</p>
         <h1>Växelräknaren</h1>
@@ -16,7 +17,7 @@
         <form id="change-form" novalidate>
             <div class="currency-pair">
                 <div class="currency-field">
-                    <label for="currency-select">Du betalade i</label>
+                    <label for="currency-select">Du betalade i</label> <!--Visar vad man betalar med-->
                     <select id="currency-select" name="currency">
                         <option value="SEK">Svenska kronor (SEK)</option>
                         <option value="EUR">Euro (EUR)</option>
@@ -25,7 +26,7 @@
                     </select>
                 </div>
                 <div class="currency-field">
-                    <label for="target-currency-select">Visa växeln i</label>
+                    <label for="target-currency-select">Visa växeln i</label> <!--Visar vilken valuta som man har växlat till-->
                     <select id="target-currency-select" name="targetCurrency">
                         <option value="SEK" selected>Svenska kronor (SEK)</option>
                         <option value="EUR">Euro (EUR)</option>
